@@ -15,12 +15,16 @@ import Footer from "./components/Footer";
 import ScrollUp from "./components/ScrollUp";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import AllBooksPage from "./pages/AllBooksPage";
+import BookDetailsPage from "./pages/BookDetailsPage";
 
 import AdminSidebar from "./components/admin/AdminSidebar";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import BooksManagement from "./components/admin/BooksManagement";
 import OrdersManagement from "./components/admin/OrdersManagement";
 import { SettingsPage } from "./components/admin/SettingsPage";
+import { BookFormPage } from "./components/admin/books/BookFormPage";
+import { OrderDetailPage } from "./components/admin/orders/OrderDetailPage";
 
 import { Cart } from "./components/Cart";
 
@@ -58,7 +62,9 @@ function AdminLayout({ children }) {
 function App() {
   const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
-  const { items: cartItems } = useSelector((state) => state.cart);
+  const { items: cartItems, isInitialized } = useSelector(
+    (state) => state.cart,
+  );
 
   useEffect(() => {
     const initAuth = async () => {
@@ -79,15 +85,15 @@ function App() {
       window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, [dispatch]);
 
-  // Sync cart with server whenever it changes
+  // Sync cart with server whenever it changes, but only after initialization
   useEffect(() => {
-    if (token && cartItems.length > 0) {
+    if (token && isInitialized) {
       const timer = setTimeout(() => {
         dispatch(syncCart(cartItems));
       }, 1000); // Debounce sync
       return () => clearTimeout(timer);
     }
-  }, [cartItems, token, dispatch]);
+  }, [cartItems, token, dispatch, isInitialized]);
 
   return (
     <BrowserRouter>
@@ -96,6 +102,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/books" element={<AllBooksPage />} />
+          <Route path="/books/:id" element={<BookDetailsPage />} />
 
           <Route
             path="/admin"
@@ -114,10 +122,34 @@ function App() {
             }
           />
           <Route
+            path="/admin/books/new"
+            element={
+              <AdminLayout>
+                <BookFormPage />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/admin/books/edit/:id"
+            element={
+              <AdminLayout>
+                <BookFormPage />
+              </AdminLayout>
+            }
+          />
+          <Route
             path="/admin/orders"
             element={
               <AdminLayout>
                 <OrdersManagement />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <AdminLayout>
+                <OrderDetailPage />
               </AdminLayout>
             }
           />

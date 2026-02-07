@@ -9,6 +9,7 @@ import { Search, ShoppingCart, User, Sun, Moon, X, LogOut } from "lucide-react";
 
 const navLinks = [
   { id: "home", icon: "ri-home-line", label: "Home" },
+  { id: "books", icon: "ri-book-line", label: "All Books", path: "/books" },
   { id: "featured", icon: "ri-book-3-line", label: "Featured" },
   { id: "discount", icon: "ri-price-tag-3-line", label: "Discount" },
   { id: "new", icon: "ri-bookmark-line", label: "New Books" },
@@ -24,6 +25,14 @@ const Navbar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  useEffect(() => {
+    if (location.pathname === "/books") {
+      setActiveLink("books");
+    } else if (location.pathname === "/" && activeLink === "books") {
+      setActiveLink("home");
+    }
+  }, [location.pathname]);
+
   const { user, token } = useSelector((state) => state.auth);
   const { items: cartItems } = useSelector((state) => state.cart);
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
@@ -35,7 +44,6 @@ const Navbar = () => {
   const isAuthenticated = !!token;
   const isAdmin = user?.role === "admin";
 
-  // Fetch books when search opens
   useEffect(() => {
     if (isSearchOpen && allBooks.length === 0) {
       import("../lib/api").then(({ booksApi }) => {
@@ -47,7 +55,6 @@ const Navbar = () => {
     }
   }, [isSearchOpen, allBooks.length]);
 
-  // Filter books based on query
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -63,20 +70,27 @@ const Navbar = () => {
     setSearchResults(results);
   }, [searchQuery, allBooks]);
 
-  const handleNavClick = (e, id) => {
+  const handleNavClick = (e, link) => {
     e.preventDefault();
-    setActiveLink(id);
+
+    if (link.path) {
+      setActiveLink(link.id);
+      navigate(link.path);
+      return;
+    }
+
+    setActiveLink(link.id);
 
     if (location.pathname !== "/") {
       navigate("/");
       setTimeout(() => {
-        const element = document.getElementById(id);
+        const element = document.getElementById(link.id);
         if (element) {
           element.scrollIntoView({ behavior: "smooth" });
         }
       }, 100);
     } else {
-      const element = document.getElementById(id);
+      const element = document.getElementById(link.id);
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -96,7 +110,6 @@ const Navbar = () => {
       const currentScrollY = window.scrollY;
       setIsScrolled(currentScrollY >= 50);
 
-      // Automatic toggle logic for mobile/tablet
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
       } else {
@@ -163,7 +176,7 @@ const Navbar = () => {
                         ? "text-landing-primary"
                         : "text-landing-text hover:text-landing-primary"
                     }`}
-                    onClick={(e) => handleNavClick(e, link.id)}
+                    onClick={(e) => handleNavClick(e, link)}
                   >
                     {link.label}
                     {activeLink === link.id && (
@@ -201,19 +214,11 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-1">
-                {isAdmin ? (
+                {isAdmin && (
                   <Link
                     to="/admin"
                     className="p-2 text-landing-title hover:text-landing-primary hover:bg-landing-primary/5 rounded-full transition-all"
                     title="Admin Dashboard"
-                  >
-                    <User size={18} />
-                  </Link>
-                ) : (
-                  <Link
-                    to="/profile"
-                    className="p-2 text-landing-title hover:text-landing-primary hover:bg-landing-primary/5 rounded-full transition-all"
-                    title="Profile"
                   >
                     <User size={18} />
                   </Link>
@@ -273,7 +278,7 @@ const Navbar = () => {
                     ? "text-landing-primary"
                     : "text-landing-text/60"
                 }`}
-                onClick={(e) => handleNavClick(e, link.id)}
+                onClick={(e) => handleNavClick(e, link)}
               >
                 <i className={`${link.icon} text-xl`}></i>
               </a>
@@ -335,6 +340,7 @@ const Navbar = () => {
                         <img
                           src={book.image}
                           alt={book.title}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -350,12 +356,30 @@ const Navbar = () => {
                         <span className="block font-bold text-landing-primary">
                           ${book.discountPrice || book.originalPrice}
                         </span>
+                        <div className="text-[10px] mt-1 text-right">
+                          {book.stock > 0 ? (
+                            <span className="text-emerald-600 font-medium">
+                              {book.stock} in stock
+                            </span>
+                          ) : (
+                            <span className="text-red-500 font-medium">
+                              Out of Stock
+                            </span>
+                          )}
+                        </div>
                         <button
-                          className="text-xs uppercase font-bold text-landing-text/50 hover:text-landing-primary mt-1"
+                          className={`text-xs uppercase font-bold mt-1 ${
+                            book.stock > 0
+                              ? "text-landing-text/50 hover:text-landing-primary"
+                              : "text-gray-400 cursor-not-allowed"
+                          }`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            dispatch(addToCart(book));
+                            if (book.stock > 0) {
+                              dispatch(addToCart(book));
+                            }
                           }}
+                          disabled={book.stock <= 0}
                         >
                           Add to Cart
                         </button>

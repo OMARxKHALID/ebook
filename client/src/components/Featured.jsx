@@ -8,7 +8,8 @@ import { useDispatch } from "react-redux";
 import { addToCart } from "../store/slices/cartSlice";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingCart, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Featured = () => {
   const [featuredBooks, setFeaturedBooks] = useState([]);
@@ -100,23 +101,38 @@ const Featured = () => {
                       {book.title}
                     </h3>
 
-                    <div className="flex items-center justify-center lg:justify-start gap-3 mb-5">
-                      <span className="text-xl font-bold text-landing-primary">
-                        ${book.discountPrice.toFixed(2)}
-                      </span>
-                      <span className="text-sm line-through text-landing-text opacity-40">
-                        ${book.originalPrice.toFixed(2)}
+                    <div className="flex flex-col items-center lg:items-start gap-2 mb-5">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl font-bold text-landing-primary">
+                          ${book.discountPrice.toFixed(2)}
+                        </span>
+                        <span className="text-sm line-through text-landing-text opacity-40">
+                          ${book.originalPrice.toFixed(2)}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          book.stock > 0
+                            ? book.stock < 5
+                              ? "bg-amber-500/10 text-amber-600"
+                              : "bg-emerald-500/10 text-emerald-600"
+                            : "bg-red-500/10 text-red-600"
+                        }`}
+                      >
+                        {book.stock > 0
+                          ? `${book.stock} In Stock`
+                          : "Out of Stock"}
                       </span>
                     </div>
 
                     <Button
+                      asChild
                       className="w-full rounded-xl py-5 bg-landing-primary text-white hover:bg-landing-primary/90 transition-all flex items-center justify-center gap-2 font-bold"
-                      onClick={() => {
-                        dispatch(addToCart(book));
-                      }}
                     >
-                      <ShoppingCart size={16} />
-                      Add to Cart
+                      <Link to={`/books/${book._id || book.id}`}>
+                        <Eye size={16} />
+                        View Details
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>

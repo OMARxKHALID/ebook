@@ -8,7 +8,8 @@ import { addToCart } from "../store/slices/cartSlice";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Eye } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const NewBooks = () => {
   const [newBooks, setNewBooks] = useState([]);
@@ -80,21 +81,43 @@ const NewBooks = () => {
                     <h3 className="text-lg font-montagu font-bold text-landing-title mb-2">
                       {book.title}
                     </h3>
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg font-bold text-landing-primary">
                         ${book.discountPrice.toFixed(2)}
                       </span>
                     </div>
-                    <Button
-                      size="sm"
-                      className="rounded-lg bg-landing-primary text-white hover:bg-landing-primary/90 transition-colors flex items-center gap-2"
-                      onClick={() => {
-                        dispatch(addToCart(book));
-                      }}
-                    >
-                      <ShoppingCart size={14} />
-                      Buy Now
-                    </Button>
+                    <div className="text-xs mb-3 font-medium">
+                      {book.stock > 0 ? (
+                        <span className="text-emerald-600">
+                          {book.stock} In Stock
+                        </span>
+                      ) : (
+                        <span className="text-red-500">Out of Stock</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        asChild
+                        className="rounded-lg bg-landing-title/5 text-landing-title hover:bg-landing-title/10 transition-colors flex items-center gap-2"
+                      >
+                        <Link to={`/books/${book._id || book.id}`}>
+                          <Eye size={14} />
+                          Details
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="rounded-lg border border-landing-primary text-landing-primary bg-transparent hover:bg-landing-primary hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:bg-transparent"
+                        onClick={() => {
+                          dispatch(addToCart(book));
+                        }}
+                        disabled={book.stock <= 0}
+                      >
+                        <ShoppingCart size={14} />
+                        {book.stock > 0 ? "Add to Cart" : "Out of Stock"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -84,6 +84,25 @@ router.get(
   }),
 );
 
+// GET SINGLE ORDER (Admin)
+router.get(
+  "/:id",
+  verifyToken,
+  verifyAdmin,
+  asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id)
+      .populate("books.book")
+      .populate("user", "name email");
+
+    if (!order) {
+      res.status(404);
+      throw new Error("Order not found");
+    }
+
+    res.status(200).json(order);
+  }),
+);
+
 // UPDATE ORDER STATUS (Admin)
 router.put(
   "/:id",

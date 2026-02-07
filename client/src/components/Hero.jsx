@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { booksApi } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   const [books, setBooks] = useState([]);
@@ -79,13 +80,13 @@ const Hero = () => {
                 size="lg"
                 className="rounded-full px-8 py-6 text-base font-bold bg-landing-primary hover:bg-landing-primary/90 transition-all font-montserrat shadow-lg shadow-landing-primary/20"
               >
-                <a
-                  href="#featured"
+                <Link
+                  to="/books"
                   className="flex items-center justify-center gap-2"
                 >
                   Explore Library
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </Link>
               </Button>
 
               <a
@@ -98,6 +99,53 @@ const Hero = () => {
           </motion.div>
         </motion.div>
 
+        {/* Mobile & Tablet: Simple Swiper */}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          viewport={{ once: true }}
+          className="w-full relative flex lg:hidden z-20 justify-center"
+        >
+          <div className="w-full max-w-md px-4">
+            <Swiper
+              key={`mobile-swiper-${books.length}`}
+              grabCursor={true}
+              centeredSlides={true}
+              spaceBetween={32}
+              slidesPerView={1.3}
+              loop={books.length > 1}
+              modules={[Autoplay]}
+              autoplay={{
+                delay: 2500,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              className="w-full py-4"
+            >
+              {books.length > 0
+                ? books.map((book) => (
+                    <SwiperSlide key={book._id}>
+                      <div className="relative w-full max-w-[180px] mx-auto aspect-2/3 rounded-xl overflow-hidden bg-white dark:bg-landing-container/10 shadow-md transition-all duration-300 hover:shadow-lg">
+                        <img
+                          src={book.image}
+                          alt={book.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </SwiperSlide>
+                  ))
+                : /* Skeleton/Empty State */
+                  [1, 2, 3].map((n) => (
+                    <SwiperSlide key={n}>
+                      <div className="w-full max-w-[180px] mx-auto aspect-2/3 bg-landing-title/10 rounded-xl animate-pulse" />
+                    </SwiperSlide>
+                  ))}
+            </Swiper>
+          </div>
+        </motion.div>
+
+        {/* Desktop: Coverflow Effect */}
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           whileInView={{ opacity: 1, x: 0 }}
@@ -106,12 +154,13 @@ const Hero = () => {
           className="w-full relative items-center justify-center hidden lg:flex z-20"
         >
           <Swiper
+            key={`desktop-swiper-${books.length}`}
             effect={"coverflow"}
             grabCursor={true}
             centeredSlides={true}
             spaceBetween={-28}
             slidesPerView={3}
-            loop={true}
+            loop={books.length >= 3}
             coverflowEffect={{
               rotate: 50,
               stretch: 0,
@@ -121,8 +170,9 @@ const Hero = () => {
             }}
             modules={[EffectCoverflow, Autoplay]}
             autoplay={{
-              delay: 2000,
+              delay: 3000,
               disableOnInteraction: false,
+              pauseOnMouseEnter: true,
             }}
             className="w-full h-full py-10 px-10"
           >

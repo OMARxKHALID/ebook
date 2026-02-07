@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,107 +11,68 @@ import {
 } from "@/components/ui/card";
 import { booksApi } from "@/lib/api";
 import { toast } from "sonner";
-import { BookFormDialog } from "./books/BookFormDialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { useNavigate } from "react-router-dom";
 import { BooksTable } from "./books/BooksTable";
+import { handleApiError } from "@/lib/errorHandler";
+import { usePagination } from "@/hooks/usePagination";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AdminPageHeader } from "./shared/AdminPageHeader";
+import { AdminPagination } from "./shared/AdminPagination";
+import { SEO } from "../SEO";
 
 export function BooksManagement() {
+  const navigate = useNavigate();
   const [books, setBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingBook, setEditingBook] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBooks, setSelectedBooks] = useState([]);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const filteredBooks = useMemo(
+    () =>
+      books.filter(
+        (book) =>
+          book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          book.category?.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [books, searchQuery],
+  );
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedItems: paginatedBooks,
+    setCurrentPage,
+  } = usePagination(filteredBooks, 10);
 
   useEffect(() => {
     loadBooks();
   }, []);
-
   const loadBooks = async () => {
     try {
       const data = await booksApi.getAll();
       setBooks(data);
     } catch (error) {
-      toast.error("Failed to load books");
-      console.error(error);
+      handleApiError(error, "Loading Books");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredBooks = books.filter(
-    (book) =>
-      book.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.category?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedBooks = filteredBooks.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
-
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
-
-  const handleSubmit = async (formData) => {
-    setIsSubmitting(true);
-
-    try {
-      const bookData = {
-        ...formData,
-        originalPrice: parseFloat(formData.originalPrice) || 0,
-        discountPrice: parseFloat(formData.discountPrice) || 0,
-        rating: parseFloat(formData.rating) || 0,
-      };
-
-      if (editingBook) {
-        await booksApi.update(editingBook._id || editingBook.id, bookData);
-        toast.success("Book updated successfully");
-      } else {
-        await booksApi.create(bookData);
-        toast.success("Book created successfully");
-      }
-
-      setIsDialogOpen(false);
-      setEditingBook(null);
-      loadBooks();
-    } catch (error) {
-      toast.error(error.message || "Failed to save book");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  }, [searchQuery, setCurrentPage]);
 
   const handleEdit = (book) => {
-    setEditingBook(book);
-    setIsDialogOpen(true);
+    navigate(`/admin/books/edit/${book._id || book.id}`);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this book?")) return;
-
     try {
       await booksApi.delete(id);
       toast.success("Book deleted successfully");
       loadBooks();
     } catch (error) {
-      toast.error("Failed to delete book");
+      handleApiError(error, "Delete Book");
     }
   };
 
@@ -131,7 +92,7 @@ export function BooksManagement() {
       setSelectedBooks([]);
       loadBooks();
     } catch (error) {
-      toast.error("Failed to delete selected books");
+      handleApiError(error, "Bulk Delete");
     }
   };
 
@@ -159,44 +120,35 @@ export function BooksManagement() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Books</h1>
-          <p className="text-muted-foreground">
-            Manage your book catalog. {books.length} total books.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {selectedBooks.length > 0 && (
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              className="animate-in fade-in slide-in-from-top-2 duration-300"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected ({selectedBooks.length})
-            </Button>
-          )}
+    <div className="space-y-6 pb-8 animate-in fade-in duration-500">
+      <SEO
+        title="Manage Books"
+        description="Interface for adding, editing, and deleting books from the catalog."
+        noindex={true}
+      />
+      <AdminPageHeader
+        title="Books"
+        description={`Manage your book catalog. ${books.length} total books.`}
+      >
+        {selectedBooks.length > 0 && (
           <Button
-            onClick={() => {
-              setEditingBook(null);
-              setIsDialogOpen(true);
-            }}
+            variant="destructive"
+            onClick={handleBulkDelete}
+            className="animate-in fade-in slide-in-from-top-2 duration-300"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Book
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Selected ({selectedBooks.length})
           </Button>
-        </div>
-      </div>
+        )}
+        <Button onClick={() => navigate("/admin/books/new")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Book
+        </Button>
+      </AdminPageHeader>
 
       <Card>
         <CardHeader>
@@ -229,61 +181,13 @@ export function BooksManagement() {
             onDelete={handleDelete}
           />
 
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className={
-                        currentPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer"
-                      }
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          isActive={page === currentPage}
-                          onClick={() => setCurrentPage(page)}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ),
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className={
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer"
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
-
-      <BookFormDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSubmit={handleSubmit}
-        editingBook={editingBook}
-        isSubmitting={isSubmitting}
-      />
     </div>
   );
 }

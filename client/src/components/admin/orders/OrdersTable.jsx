@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -16,20 +17,20 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Eye } from "lucide-react";
+import { MoreHorizontal, Eye, Package } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { AdminStatusBadge } from "../shared/AdminStatusBadge";
 
 export function OrdersTable({
   orders,
   orderStatuses,
-  onViewDetails,
   onStatusChange,
-  getStatusBadge,
   formatDate,
 }) {
+  const navigate = useNavigate();
+
   return (
     <>
-      {/* Mobile View */}
       <div className="md:hidden space-y-4">
         {orders.length > 0 ? (
           orders.map((order) => (
@@ -49,7 +50,7 @@ export function OrdersTable({
                     </span>
                     <span>•</span>
                     <span className="text-xs text-muted-foreground font-medium">
-                      {order.items?.length || 0} item(s)
+                      {order.books?.length || 0} item(s)
                     </span>
                   </div>
                 </div>
@@ -60,7 +61,11 @@ export function OrdersTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onViewDetails(order)}>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        navigate(`/admin/orders/${order._id || order.id}`)
+                      }
+                    >
                       <Eye className="mr-2 h-4 w-4" /> View Details
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -102,71 +107,87 @@ export function OrdersTable({
               <div className="pt-2">
                 <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-dashed">
                   <span className="text-xs font-medium">Order Status</span>
-                  {getStatusBadge(order.status)}
+                  <AdminStatusBadge status={order.status} />
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed text-muted-foreground text-sm italic">
-            No orders found.
-          </div>
+          <EmptyState
+            icon={Package}
+            title="No orders found"
+            description="You don't have any orders yet."
+          />
         )}
       </div>
 
-      {/* Desktop View */}
-      <div className="hidden md:block rounded-md border overflow-hidden">
+      <div className="hidden md:block rounded-xl border bg-card shadow-sm overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order</TableHead>
+          <TableHeader className="bg-muted/40">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="pl-4">Order</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Items</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead className="w-12"></TableHead>
+              <TableHead className="w-12 pr-4"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.length > 0 ? (
               orders.map((order) => (
-                <TableRow key={order._id || order.id}>
-                  <TableCell className="font-medium">
+                <TableRow key={order._id || order.id} className="group">
+                  <TableCell className="font-medium pl-4">
                     {order.orderNumber ||
                       `#${(order._id || order.id).slice(-6)}`}
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{order.user?.name}</p>
+                      <p className="font-semibold text-sm">
+                        {order.user?.name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {order.user?.email}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-muted-foreground">
-                      {order.items?.length || 0} item(s)
+                    <span className="text-muted-foreground text-sm">
+                      {order.books?.length || 0} item(s)
                     </span>
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-right font-bold text-sm">
                     ${order.totalAmount?.toFixed(2)}
                   </TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell>
+                    <AdminStatusBadge
+                      status={order.status}
+                      className="text-[10px] h-5"
+                    />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
                     {formatDate(order.createdAt)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onViewDetails(order)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            navigate(`/admin/orders/${order._id || order.id}`)
+                          }
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
@@ -195,11 +216,12 @@ export function OrdersTable({
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No orders yet.
+                <TableCell colSpan={7} className="h-64">
+                  <EmptyState
+                    icon={Package}
+                    title="No orders found"
+                    description="You don't have any orders yet."
+                  />
                 </TableCell>
               </TableRow>
             )}

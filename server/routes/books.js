@@ -18,7 +18,7 @@ router.get(
     } else if (qFeatured === "true") {
       books = await Book.find({ isFeatured: true }).sort({ createdAt: -1 });
     } else {
-      books = await Book.find();
+      books = await Book.find().sort({ createdAt: -1 });
     }
 
     res.status(200).json(books);

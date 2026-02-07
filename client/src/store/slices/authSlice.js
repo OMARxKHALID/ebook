@@ -56,7 +56,10 @@ export const checkAuth = createAsyncThunk(
       }
     };
 
-    if (!token) return handleRefresh();
+    // If no token exists, user is not logged in - don't try to refresh
+    if (!token) {
+      return rejectWithValue("No token found");
+    }
 
     try {
       const decoded = jwtDecode(token);

@@ -1,6 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-// Helper for making authenticated requests with retry logic
 const request = async (endpoint, options = {}, retries = 3, backoff = 500) => {
   const token = localStorage.getItem("token");
 
@@ -13,7 +12,7 @@ const request = async (endpoint, options = {}, retries = 3, backoff = 500) => {
   const config = {
     ...options,
     headers,
-    credentials: "include", // Required for cookies
+    credentials: "include",
   };
 
   if (options.body instanceof FormData) {
@@ -23,12 +22,10 @@ const request = async (endpoint, options = {}, retries = 3, backoff = 500) => {
   try {
     const response = await fetch(`${API_URL}${endpoint}`, config);
 
-    // Handle 401 Unauthorized globally - try to refresh token
     if (response.status === 401 && endpoint !== "/auth/refresh") {
       try {
         const refreshData = await authApi.refresh();
         localStorage.setItem("token", refreshData.token);
-        // Retry the original request with new token
         return request(endpoint, options, retries, backoff);
       } catch (refreshError) {
         window.dispatchEvent(new Event("auth:unauthorized"));
@@ -54,7 +51,6 @@ const request = async (endpoint, options = {}, retries = 3, backoff = 500) => {
   }
 };
 
-// Auth API
 export const authApi = {
   login: (credentials) =>
     request("/auth/login", {
@@ -99,7 +95,6 @@ export const authApi = {
     }),
 };
 
-// Books API
 export const booksApi = {
   getAll: (filters = {}) => {
     const params = new URLSearchParams(filters);
@@ -132,9 +127,10 @@ export const booksApi = {
     }),
 };
 
-// Orders API
 export const ordersApi = {
   getAll: () => request("/orders"),
+
+  getById: (id) => request(`/orders/${id}`),
 
   getMyOrders: () => request("/orders/my-orders"),
 
@@ -151,7 +147,6 @@ export const ordersApi = {
     }),
 };
 
-// Upload API
 export const uploadApi = {
   uploadImage: async (file) => {
     const formData = new FormData();

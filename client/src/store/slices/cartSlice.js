@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { authApi } from "../../lib/api";
 import { toast } from "sonner";
-import { fetchProfile } from "./authSlice";
+import { fetchProfile, logout } from "./authSlice";
 
 export const syncCart = createAsyncThunk(
   "cart/sync",
@@ -14,11 +14,22 @@ export const syncCart = createAsyncThunk(
   },
 );
 
+export const clearCartServer = createAsyncThunk(
+  "cart/clearServer",
+  async (_, { getState }) => {
+    const { auth } = getState();
+    if (auth.token) {
+      await authApi.syncCart([]);
+    }
+  },
+);
+
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
     items: JSON.parse(localStorage.getItem("cart")) || [],
     isCartOpen: false,
+    isInitialized: false,
   },
   reducers: {
     addToCart: (state, action) => {
@@ -27,17 +38,25 @@ const cartSlice = createSlice({
       const existing = state.items.find((item) => item.id === id);
       if (existing) {
         existing.quantity += 1;
-        toast.success("Increased quantity in cart");
+        toast.success("Quantity Updated", {
+          description: `Increased ${book.title} quantity.`,
+        });
       } else {
         state.items.push({ ...book, id, quantity: 1 });
-        toast.success("Added to cart");
+        toast.success("Added to Cart", {
+          description: `${book.title} is now in your cart.`,
+        });
       }
       localStorage.setItem("cart", JSON.stringify(state.items));
     },
     removeFromCart: (state, action) => {
-      state.items = state.items.filter((item) => item.id !== action.payload);
+      const id = action.payload;
+      const itemToRemove = state.items.find((i) => i.id === id);
+      state.items = state.items.filter((item) => item.id !== id);
       localStorage.setItem("cart", JSON.stringify(state.items));
-      toast.success("Removed from cart");
+      toast.success("Item Removed", {
+        description: `${itemToRemove?.title || "Book"} removed from cart.`,
+      });
     },
     updateQuantity: (state, action) => {
       const { id, quantity } = action.payload;
@@ -56,28 +75,45 @@ const cartSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(fetchProfile.fulfilled, (state, action) => {
-      const serverCart = action.payload.cart || [];
-      const itemsFromServer = serverCart.map((item) => ({
-        ...item.book,
-        id: item.book._id || item.book.id,
-        quantity: item.quantity,
-      }));
+    builder
+      .addCase(fetchProfile.fulfilled, (state, action) => {
+        const serverCart = action.payload.cart || [];
+        const itemsFromServer = serverCart
+          .map((item) => ({
+            ...item.book,
+            id: item.book._id || item.book.id,
+            quantity: item.quantity,
+          }))
+          .filter((item) => item.id);
 
-      // Simple merge: Priority to server cart, but keep local-only items
-      const localItems = [...state.items];
-      const merged = [...itemsFromServer];
+        const localItems = JSON.parse(localStorage.getItem("cart")) || [];
 
-      localItems.forEach((localItem) => {
-        const existsOnServer = merged.find((s) => s.id === localItem.id);
-        if (!existsOnServer) {
-          merged.push(localItem);
-        }
+        const cartMap = new Map();
+
+        itemsFromServer.forEach((item) => {
+          cartMap.set(item.id, item);
+        });
+
+        localItems.forEach((localItem) => {
+          if (!cartMap.has(localItem.id)) {
+            cartMap.set(localItem.id, localItem);
+          }
+        });
+
+        const merged = Array.from(cartMap.values());
+
+        state.items = merged;
+        localStorage.setItem("cart", JSON.stringify(state.items));
+        state.isInitialized = true;
+      })
+      .addCase(clearCartServer.fulfilled, (state) => {
+        state.items = [];
+        localStorage.removeItem("cart");
+      })
+      .addCase(logout.fulfilled, (state) => {
+        state.items = [];
+        localStorage.removeItem("cart");
       });
-
-      state.items = merged;
-      localStorage.setItem("cart", JSON.stringify(state.items));
-    });
   },
 });
 

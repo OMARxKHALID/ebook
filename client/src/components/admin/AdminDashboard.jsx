@@ -4,8 +4,9 @@ import { booksApi, ordersApi } from "@/lib/api";
 import { StatCard } from "./dashboard/StatCard";
 import { RecentOrders } from "./dashboard/RecentOrders";
 import { RecentBooks } from "./dashboard/RecentBooks";
-
-// Helper to get last 6 months for chart
+import { AdminPageHeader } from "./shared/AdminPageHeader";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { SEO } from "../SEO";
 
 export function AdminDashboard() {
   const [books, setBooks] = useState([]);
@@ -53,21 +54,20 @@ export function AdminDashboard() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! Here's an overview of your e-book store.
-        </p>
-      </div>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <SEO
+        title="Admin Dashboard"
+        description="Overview of your ebook store's performance."
+        noindex={true}
+      />
+      <AdminPageHeader
+        title="Dashboard"
+        description="Welcome back! Here's an overview of your e-book store."
+      />
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -3,7 +3,6 @@ import { Search, Download, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -20,54 +19,44 @@ import {
 } from "@/components/ui/select";
 import { ordersApi } from "@/lib/api";
 import { toast } from "sonner";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 
 import { OrderStatusCards } from "./orders/OrderStatusCards";
 import { OrdersTable } from "./orders/OrdersTable";
-import { OrderDetailsDialog } from "./orders/OrderDetailsDialog";
-import { Clock, Package, Truck, CheckCircle, XCircle } from "lucide-react";
 
-const orderStatuses = [
-  { value: "pending", label: "Pending", icon: Clock, color: "text-yellow-500" },
-  {
-    value: "processing",
-    label: "Processing",
-    icon: Package,
-    color: "text-blue-500",
-  },
-  { value: "shipped", label: "Shipped", icon: Truck, color: "text-purple-500" },
-  {
-    value: "completed",
-    label: "Completed",
-    icon: CheckCircle,
-    color: "text-green-500",
-  },
-  {
-    value: "cancelled",
-    label: "Cancelled",
-    icon: XCircle,
-    color: "text-red-500",
-  },
-];
+import { ORDER_STATUSES } from "@/lib/orderUtils";
+import { formatOrderDate } from "@/lib/dateUtils";
+import { handleApiError } from "@/lib/errorHandler";
+import { usePagination } from "@/hooks/usePagination";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AdminPageHeader } from "./shared/AdminPageHeader";
+import { AdminPagination } from "./shared/AdminPagination";
+import { SEO } from "../SEO";
 
 export function OrdersManagement() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const {
+    currentPage,
+    totalPages,
+    paginatedItems: paginatedOrders,
+    setCurrentPage,
+  } = usePagination(
+    orders.filter((order) => {
+      const matchesSearch =
+        order.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" || order.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    }),
+    10,
+  );
 
   useEffect(() => {
     loadOrders();
@@ -78,36 +67,15 @@ export function OrdersManagement() {
       const data = await ordersApi.getAll();
       setOrders(data);
     } catch (error) {
-      console.error("Failed to load orders:", error);
-      toast.error("Failed to load orders");
+      handleApiError(error, "Loading Orders");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.user?.email?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
-
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, setCurrentPage]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -119,80 +87,36 @@ export function OrdersManagement() {
             : order,
         ),
       );
-      if (
-        selectedOrder &&
-        (selectedOrder._id || selectedOrder.id) === orderId
-      ) {
-        setSelectedOrder((prev) => ({ ...prev, status: newStatus }));
-      }
       toast.success("Order status updated");
     } catch (error) {
-      toast.error("Failed to update order status");
+      handleApiError(error, "Update Order Status");
     }
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig =
-      orderStatuses.find((s) => s.value === status) || orderStatuses[0];
-    const Icon = statusConfig.icon;
-
-    const variants = {
-      pending: "secondary",
-      processing: "outline",
-      shipped: "outline",
-      completed: "default",
-      cancelled: "destructive",
-    };
-
-    return (
-      <Badge variant={variants[status] || "outline"} className="gap-1">
-        <Icon className={`h-3 w-3 ${statusConfig.color}`} />
-        {statusConfig.label}
-      </Badge>
-    );
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const viewOrderDetails = (order) => {
-    setSelectedOrder(order);
-    setIsDetailOpen(true);
-  };
-
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-          <p className="text-muted-foreground">
-            Manage customer orders. {orders.length} total orders.
-          </p>
-        </div>
+    <div className="space-y-6 pb-8 animate-in fade-in duration-500">
+      <SEO
+        title="Manage Orders"
+        description="Review customer orders and update shipping status."
+        noindex={true}
+      />
+      <AdminPageHeader
+        title="Orders"
+        description={`Manage customer orders. ${orders.length} total orders.`}
+      >
         <Button variant="outline">
           <Download className="mr-2 h-4 w-4" />
           Export Orders
         </Button>
-      </div>
+      </AdminPageHeader>
 
       <OrderStatusCards
         orders={orders}
-        orderStatuses={orderStatuses}
+        orderStatuses={ORDER_STATUSES}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
       />
@@ -224,7 +148,7 @@ export function OrdersManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  {orderStatuses.map((status) => (
+                  {ORDER_STATUSES.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
                     </SelectItem>
@@ -237,68 +161,18 @@ export function OrdersManagement() {
         <CardContent>
           <OrdersTable
             orders={paginatedOrders}
-            orderStatuses={orderStatuses}
-            onViewDetails={viewOrderDetails}
+            orderStatuses={ORDER_STATUSES}
             onStatusChange={handleStatusChange}
-            getStatusBadge={getStatusBadge}
-            formatDate={formatDate}
+            formatDate={formatOrderDate}
           />
 
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className={
-                        currentPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer"
-                      }
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          isActive={page === currentPage}
-                          onClick={() => setCurrentPage(page)}
-                          className="cursor-pointer"
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ),
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className={
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer"
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </CardContent>
       </Card>
-
-      <OrderDetailsDialog
-        isOpen={isDetailOpen}
-        onOpenChange={setIsDetailOpen}
-        order={selectedOrder}
-        orderStatuses={orderStatuses}
-        onStatusChange={handleStatusChange}
-      />
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -9,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Lock } from "lucide-react";
 
 export function SecuritySettings({
@@ -24,69 +31,96 @@ export function SecuritySettings({
       animate="visible"
       exit="exit"
     >
-      <Card>
-        <CardHeader>
+      <Card className="border shadow-sm">
+        <CardHeader className="px-6 py-4">
           <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-primary" />
-            <CardTitle>Security Settings</CardTitle>
+            <Lock className="h-4 w-4 text-primary" />
+            <CardTitle className="text-lg">Security Settings</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Update your password to keep your account secure.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  {...form.register("currentPassword")}
-                  placeholder="Enter current password"
+        <CardContent className="px-6 pb-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium">
+                        Current Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Enter current password"
+                          className="h-9"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {form.formState.errors.currentPassword && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.currentPassword.message}
-                  </p>
-                )}
+
+                <FormField
+                  control={form.control}
+                  name="newPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium">
+                        New Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Enter new password"
+                          className="h-9"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium">
+                        Confirm New Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Confirm new password"
+                          className="h-9"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  {...form.register("newPassword")}
-                  placeholder="Enter new password"
-                />
-                {form.formState.errors.newPassword && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.newPassword.message}
-                  </p>
-                )}
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  size="sm"
+                  className="h-9"
+                >
+                  {isLoading ? "Updating..." : "Update Password"}
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  {...form.register("confirmPassword")}
-                  placeholder="Confirm new password"
-                />
-                {form.formState.errors.confirmPassword && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Updating..." : "Update Password"}
-            </Button>
-          </form>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </motion.div>

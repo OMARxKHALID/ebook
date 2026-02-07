@@ -10,7 +10,9 @@ const orderSchema = z.object({
     )
     .min(1, "Order must contain at least one book"),
   totalAmount: z.number().positive("Total amount must be positive"),
-  status: z.enum(["pending", "completed", "cancelled"]).optional(),
+  status: z
+    .enum(["pending", "processing", "shipped", "completed", "cancelled"])
+    .optional(),
 });
 
 module.exports = { orderSchema };

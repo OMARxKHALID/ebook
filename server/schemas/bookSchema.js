@@ -2,6 +2,7 @@ const { z } = require("zod");
 
 const bookSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters long"),
+  author: z.string().min(2, "Author must be at least 2 characters long"),
   image: z.string().url("Must be a valid URL"),
   originalPrice: z.number().positive("Price must be a positive number"),
   discountPrice: z.number().nonnegative("Discount price cannot be negative"),

@@ -4,7 +4,13 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
 const validate = require("../middleware/validateMiddleware");
-const { registerSchema, loginSchema } = require("../schemas/authSchema");
+const {
+  registerSchema,
+  loginSchema,
+  updateProfileSchema,
+  updatePasswordSchema,
+  syncCartSchema,
+} = require("../schemas/authSchema");
 
 const generateTokens = (user) => {
   const accessToken = jwt.sign(
@@ -172,6 +178,7 @@ router.get(
 router.put(
   "/profile",
   require("../middleware/auth").verifyToken,
+  validate(updateProfileSchema),
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -196,6 +203,7 @@ router.put(
 router.put(
   "/password",
   require("../middleware/auth").verifyToken,
+  validate(updatePasswordSchema),
   asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const user = await User.findById(req.user.id);
@@ -223,6 +231,7 @@ router.put(
 router.post(
   "/sync-cart",
   require("../middleware/auth").verifyToken,
+  validate(syncCartSchema),
   asyncHandler(async (req, res) => {
     const { cart } = req.body;
     const user = await User.findById(req.user.id);

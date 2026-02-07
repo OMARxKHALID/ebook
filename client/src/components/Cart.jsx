@@ -1,10 +1,21 @@
-import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   removeFromCart,
   updateQuantity,
   clearCart,
   setCartOpen,
+  syncCart,
+  clearCartServer,
 } from "../store/slices/cartSlice";
 import { useNavigate } from "react-router-dom";
 import { ordersApi } from "@/lib/api";
@@ -18,12 +29,14 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function Cart() {
   const dispatch = useDispatch();
   const { items: cart, isCartOpen } = useSelector((state) => state.cart);
   const { token } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const cartTotal = cart.reduce(
     (acc, item) =>
@@ -39,6 +52,7 @@ export function Cart() {
       return;
     }
 
+    setIsProcessing(true);
     try {
       const orderData = {
         books: cart.map((item) => ({
@@ -49,13 +63,28 @@ export function Cart() {
       };
 
       await ordersApi.create(orderData);
-      toast.success("Order placed successfully! Thank you for your purchase.", {
+
+      toast.success("Order Placed!", {
+        description:
+          "Thank you for your purchase. We're processing your order now.",
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
         duration: 5000,
       });
-      dispatch(clearCart());
+
+      if (token) {
+        await dispatch(clearCartServer());
+      } else {
+        dispatch(clearCart());
+      }
       dispatch(setCartOpen(false));
     } catch (error) {
-      toast.error(error.message || "Failed to place order. Please try again.");
+      toast.error("Checkout Failed", {
+        description:
+          error.message || "Something went wrong. Please try again later.",
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -83,25 +112,20 @@ export function Cart() {
 
         <div className="flex-1 overflow-hidden">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-16 h-16 bg-landing-primary/5 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart
-                  size={24}
-                  className="text-landing-primary opacity-30"
-                />
-              </div>
-              <h3 className="text-lg font-montagu font-bold text-landing-title mb-1">
-                Cart is empty
-              </h3>
-              <p className="text-sm text-landing-text opacity-60 mb-6 max-w-[200px]">
-                Looks like you haven't added any books to your cart yet.
-              </p>
-              <Button
-                onClick={() => dispatch(setCartOpen(false))}
-                className="rounded-full px-6 py-2 h-auto bg-landing-primary hover:bg-landing-primary/90 text-white font-bold text-sm"
-              >
-                Start Browsing
-              </Button>
+            <div className="h-full flex items-center justify-center">
+              <EmptyState
+                icon={ShoppingCart}
+                title="Cart is empty"
+                description="Looks like you haven't added any books to your cart yet."
+                action={
+                  <Button
+                    onClick={() => dispatch(setCartOpen(false))}
+                    className="rounded-full px-6 py-2 h-auto bg-landing-primary hover:bg-landing-primary/90 text-white font-bold text-sm"
+                  >
+                    Start Browsing
+                  </Button>
+                }
+              />
             </div>
           ) : (
             <ScrollArea className="h-full px-4">
@@ -158,15 +182,22 @@ export function Cart() {
                             {item.quantity}
                           </span>
                           <button
-                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-landing-border transition-colors text-landing-title"
-                            onClick={() =>
-                              dispatch(
-                                updateQuantity({
-                                  id: item.id,
-                                  quantity: item.quantity + 1,
-                                }),
-                              )
-                            }
+                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-landing-border transition-colors text-landing-title disabled:opacity-30 disabled:cursor-not-allowed"
+                            onClick={() => {
+                              if (item.quantity < item.stock) {
+                                dispatch(
+                                  updateQuantity({
+                                    id: item.id,
+                                    quantity: item.quantity + 1,
+                                  }),
+                                );
+                              } else {
+                                toast.error(
+                                  `Only ${item.stock} items available in stock`,
+                                );
+                              }
+                            }}
+                            disabled={item.quantity >= item.stock}
                           >
                             <Plus size={12} />
                           </button>
@@ -214,12 +245,28 @@ export function Cart() {
             <div className="space-y-2">
               <Button
                 onClick={handleCheckout}
-                className="w-full py-6 rounded-xl bg-landing-title text-white dark:text-landing-body hover:bg-landing-primary hover:text-white transition-all font-bold text-base shadow-sm"
+                disabled={isProcessing}
+                className="w-full py-6 rounded-xl bg-landing-title text-white dark:text-landing-body hover:bg-landing-primary hover:text-white transition-all font-bold text-base shadow-sm disabled:opacity-70 disabled:cursor-not-allowed group"
               >
-                Checkout Now
+                {isProcessing ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  <span className="group-active:scale-95 transition-transform">
+                    Checkout Now
+                  </span>
+                )}
               </Button>
               <button
-                onClick={() => dispatch(clearCart())}
+                onClick={() => {
+                  if (token) {
+                    dispatch(clearCartServer());
+                  } else {
+                    dispatch(clearCart());
+                  }
+                }}
                 className="w-full py-2 text-xs font-bold text-landing-text opacity-40 hover:opacity-100 transition-opacity uppercase tracking-widest"
               >
                 Clear Shopping Cart

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +15,8 @@ import { useTheme } from "@/components/theme-provider";
 import { ProfileSettings } from "./settings/ProfileSettings";
 import { SecuritySettings } from "./settings/SecuritySettings";
 import { PreferenceSettings } from "./settings/PreferenceSettings";
+import { AdminPageHeader } from "./shared/AdminPageHeader";
+import { SEO } from "../SEO";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -44,14 +46,20 @@ export function SettingsPage() {
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: useMemo(
-      () => ({
-        name: user?.name || "",
-        email: user?.email || "",
-      }),
-      [user],
-    ),
+    defaultValues: {
+      name: "",
+      email: "",
+    },
   });
+
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        name: user.name || "",
+        email: user.email || "",
+      });
+    }
+  }, [user, profileForm]);
 
   const passwordForm = useForm({
     resolver: zodResolver(passwordSchema),
@@ -103,39 +111,40 @@ export function SettingsPage() {
       window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   return (
-    <div className="space-y-6 pb-10 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and preferences.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 pb-8 animate-in fade-in duration-500">
+      <SEO
+        title="Account Settings"
+        description="Update your admin profile, password, and system preferences."
+        noindex={true}
+      />
+      <AdminPageHeader
+        title="Settings"
+        description="Manage your account settings and preferences."
+      />
 
       <Tabs
         defaultValue="profile"
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="bg-muted/50 p-1 h-11 inline-flex border rounded-xl">
+        <TabsList className="bg-muted/50 p-1 h-10 inline-flex border rounded-lg">
           <TabsTrigger
             value="profile"
-            className="px-4 data-[state=active]:bg-background data-[state=active]:text-primary transition-all flex items-center gap-2 h-full rounded-lg font-semibold"
+            className="px-4 data-[state=active]:bg-background data-[state=active]:text-primary transition-all flex items-center gap-2 h-full rounded-md text-sm font-medium"
           >
             <User className="h-4 w-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger
             value="security"
-            className="px-4 data-[state=active]:bg-background data-[state=active]:text-primary transition-all flex items-center gap-2 h-full rounded-lg font-semibold"
+            className="px-4 data-[state=active]:bg-background data-[state=active]:text-primary transition-all flex items-center gap-2 h-full rounded-md text-sm font-medium"
           >
             <Lock className="h-4 w-4" />
             Security
           </TabsTrigger>
           <TabsTrigger
             value="preferences"
-            className="px-4 data-[state=active]:bg-background data-[state=active]:text-primary transition-all flex items-center gap-2 h-full rounded-lg font-semibold"
+            className="px-4 data-[state=active]:bg-background data-[state=active]:text-primary transition-all flex items-center gap-2 h-full rounded-md text-sm font-medium"
           >
             <Bell className="h-4 w-4" />
             Preferences
@@ -144,7 +153,7 @@ export function SettingsPage() {
 
         <AnimatePresence mode="wait">
           {activeTab === "profile" && (
-            <TabsContent value="profile" forceMount>
+            <TabsContent value="profile" forceMount className="mt-0">
               <ProfileSettings
                 user={user}
                 form={profileForm}
@@ -156,7 +165,7 @@ export function SettingsPage() {
           )}
 
           {activeTab === "security" && (
-            <TabsContent value="security" forceMount>
+            <TabsContent value="security" forceMount className="mt-0">
               <SecuritySettings
                 form={passwordForm}
                 onSubmit={onPasswordSubmit}
@@ -167,7 +176,7 @@ export function SettingsPage() {
           )}
 
           {activeTab === "preferences" && (
-            <TabsContent value="preferences" forceMount>
+            <TabsContent value="preferences" forceMount className="mt-0">
               <PreferenceSettings
                 theme={theme}
                 isDark={isDark}
